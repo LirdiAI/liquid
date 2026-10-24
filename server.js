@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const PORT = Number(process.env.PORT || 3000);
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = process.env.GEMINI_MODEL || 'Flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const MAX_BODY = 18 * 1024 * 1024;
 
 const ALLOWED_ORIGINS = new Set([
