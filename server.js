@@ -20,14 +20,14 @@ const server = http.createServer(async (req, res) => {
     // Открытие интерфейса Liquid
     if (
         req.method === 'GET' &&
-        (req.url === '/' || req.url === '/liquid.html')
+        (req.url === '/' || req.url === '/index.html')
     ) {
-        const htmlPath = path.join(__dirname, 'liquid.html');
+        const htmlPath = path.join(__dirname, 'index.html');
 
         if (!fs.existsSync(htmlPath)) {
             res.writeHead(404, headers);
             return res.end(JSON.stringify({
-                error: 'Файл liquid.html не найден'
+                error: 'Файл index.html не найден'
             }));
         }
 
