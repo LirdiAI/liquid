@@ -115,15 +115,110 @@ $('fileInput').addEventListener('change',e=>{addFiles(e.target.files);e.target.v
 promptBox.addEventListener('paste',e=>{const items=Array.from(e.clipboardData?.items||[]);const pasted=items.filter(i=>i.kind==='file'&&(i.type.startsWith('image/')||i.type.startsWith('video/'))).map(i=>i.getAsFile()).filter(Boolean);if(pasted.length){e.preventDefault();addFiles(pasted)}});
 promptBox.addEventListener('input',()=>{syncSendButton();promptBox.style.height='auto';promptBox.style.height=Math.min(promptBox.scrollHeight,76)+'px';});
 promptBox.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!sendButton.disabled)sendButton.click();}});
-sendButton.addEventListener('click',()=>{
- const text=promptBox.value.trim(); if(!text && !attachedFiles.length)return;
- $('welcome').hidden=true;
- const message=document.createElement('div'); message.className='message user';
- if(text){const body=document.createElement('div');body.textContent=text;message.appendChild(body)}
- attachedFiles.forEach(file=>{const url=URL.createObjectURL(file);if(file.type.startsWith('image/')){const img=document.createElement('img');img.src=url;img.alt=file.name||'Изображение';img.style.cssText='display:block;max-width:min(320px,100%);max-height:260px;border-radius:10px;margin-top:8px';message.appendChild(img)}else if(file.type.startsWith('video/')){const video=document.createElement('video');video.src=url;video.controls=true;video.style.cssText='display:block;max-width:min(360px,100%);max-height:280px;border-radius:10px;margin-top:8px';message.appendChild(video)}else{const f=document.createElement('div');f.textContent='📎 '+(file.name||'Файл');f.style.marginTop='8px';message.appendChild(f)}});
- $('messages').appendChild(message);
- attachedFiles.length=0;renderAttachments();promptBox.value='';promptBox.style.height='';syncSendButton();
- toast('Вложения добавлены в сообщение. Для анализа ИИ нужно подключить Gemini API.');
+
+sendButton.addEventListener('click', async () => {
+    const text = promptBox.value.trim();
+
+    if (!text && attachedFiles.length === 0) return;
+    if (controller) return;
+
+    $('welcome').hidden = true;
+
+    // Добавляем сообщение пользователя
+    const userMessage = document.createElement('div');
+    userMessage.className = 'message user';
+
+    if (text) {
+        const body = document.createElement('div');
+        body.textContent = text;
+        userMessage.appendChild(body);
+    }
+
+    if (attachedFiles.length > 0) {
+        const info = document.createElement('div');
+        info.textContent =
+            '📎 Вложений: ' + attachedFiles.length +
+            ' (передача файлов ИИ пока не подключена)';
+        info.style.marginTop = '8px';
+        userMessage.appendChild(info);
+    }
+
+    $('messages').appendChild(userMessage);
+
+    // Сохраняем текст и очищаем поле
+    promptBox.value = '';
+    promptBox.style.height = '';
+    attachedFiles.length = 0;
+    renderAttachments();
+    syncSendButton();
+
+    // Создаём сообщение для ответа ИИ
+    const answerBox = document.createElement('div');
+    answerBox.className = 'message assistant';
+
+    const role = document.createElement('div');
+    role.className = 'roleline';
+    role.textContent = 'Liquid · Gemini Flash';
+
+    const answer = document.createElement('div');
+    answer.className = 'md';
+    answer.textContent = 'Думаю…';
+
+    answerBox.append(role, answer);
+    $('messages').appendChild(answerBox);
+
+    // Запрашиваем ответ у собственного сервера
+    controller = new AbortController();
+    sendButton.disabled = true;
+    sendButton.textContent = '…';
+
+    try {
+        const response = await fetch(
+            'https://liquid-1.onrender.com/api/chat',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: text,
+                    history: [],
+                    attachments: []
+                }),
+                signal: controller.signal
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || data.message ||
+                'Ошибка сервера: HTTP ' + response.status
+            );
+        }
+
+        if (!data.answer) {
+            throw new Error('Сервер не вернул текст ответа.');
+        }
+
+        answer.textContent = data.answer;
+        role.textContent = 'Liquid · ' + (data.model || 'Gemini');
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            answer.textContent = 'Запрос отменён.';
+        } else {
+            answer.textContent = 'Не удалось получить ответ: ' +
+                error.message;
+            toast('Ошибка подключения к Gemini');
+            console.error('Liquid API error:', error);
+        }
+    } finally {
+        controller = null;
+        sendButton.textContent = '↑';
+        syncSendButton();
+    }
 });
 syncSendButton();
 
