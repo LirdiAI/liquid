@@ -1,0 +1,11 @@
+# Liquid backend configuration
+# Keep this file private; do not upload it to GitHub.
+
+# Add your Gemini API key yourself when ready
+GEMINI_API_KEY=AQ.Ab8RN6KMsCs2Ipmk8Q90LwKDlCp5tkXMnmIHgVtzPdAs5qOwYQ
+
+# Supabase project
+SUPABASE_URL=https://zwozaenujtkmykhpnhgf.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_pt8Lw2gCx7tgFUURmt-WBA_tesLNwjj
+
+# Never put a Supabase secret/service_role key in browser code.
